@@ -1,0 +1,37 @@
+# @package _global_
+
+# to execute this experiment run:
+# python run.py experiment=mnli
+
+defaults:
+  - override /trainer: default.yaml # choose trainer from 'configs/trainer/'
+  - override /module: text_classification.yaml
+  - override /datamodule: mnli_alm.yaml
+  - override /callbacks: null
+  - override /logger: wandb.yaml
+
+seed: 42
+lang: "qu"
+
+trainer:
+  max_epochs: 20 # infinite training up until convergence
+  gpus: 1
+  precision: 16
+  val_check_interval: 50000
+
+module:
+  _target_: src.projects.alm.module.TaskLMTransformer
+  model:
+    _target_: src.modules.modeling.auto_models.AutoModelForCLSClassification
+    pretrained_model_name_or_path: "xlm-roberta-base"
+    num_labels: 3
+  optimzer:
+    lr: 0.00002  # 2e-5
+  # scheduler:
+  #   num_warmup_steps: 0.1
+  scheduler: null
+
+logger:
+  wandb:
+    project: "mnli-alm_xlm-roberta-base"
+    name: "seed-${seed}_lr-${module.optimizer.lr}-lang-${lang}-bias"

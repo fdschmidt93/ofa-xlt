@@ -1,0 +1,291 @@
+# @package _global_
+
+# to execute this experiment run:
+# python run.py experiment=mnli
+
+defaults:
+  - override /trainer: default.yaml # choose trainer from 'configs/trainer/'
+  - override /module: text_classification.yaml
+  - override /callbacks: null
+  - override /datamodule: null 
+  - override /callbacks: null 
+  - override /logger: wandb.yaml
+
+seed: 42
+
+logger:
+  wandb:
+    project: oeil
+    name: "roberta-base"
+
+datamodule:
+  _target_: trident.TridentDataModule
+  _recursive_: false
+  dataset_cfg:
+    _partial_: true
+    _target_: src.projects.oeil.datamodule.setup
+  dataloader_cfg:
+    _target_: torch.utils.data.dataloader.DataLoader
+    batch_size: 8
+    num_workers: 0
+    pin_memory: true
+    train:
+      shuffle: true
+    val:
+      shuffle: false
+    test:
+      shuffle: false
+    collate_fn:
+      _target_: transformers.data.data_collator.DataCollatorWithPadding
+      tokenizer:
+        _target_: transformers.AutoTokenizer.from_pretrained
+        pretrained_model_name_or_path: ${module.model.pretrained_model_name_or_path}
+        padding: true
+  datamodule_cfg:
+    setup:
+      _target_: src.projects.oeil.datamodule.setup
+
+module:
+  model:
+    # pretrained_model_name_or_path: "prajjwal1/bert-tiny"
+    pretrained_model_name_or_path: "roberta-base"
+    num_labels: 2
+  evaluation:
+    metrics_cfg:
+      _datasets_:
+        lp:
+          acc:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              _target_: torchmetrics.functional.accuracy
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          auc:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              _target_: src.projects.oeil.evaluation.auc
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          recall_macro:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              # _target_: src.projects.oeil.evaluation.f1_macro
+              _target_: torchmetrics.functional.recall
+              num_classes: 2
+              average: "macro"
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          precision_macro:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              # _target_: src.projects.oeil.evaluation.f1_macro
+              _target_: torchmetrics.functional.precision
+              num_classes: 2
+              average: "macro"
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          precision_0:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              _target_: src.projects.oeil.evaluation.precision
+              label: 0
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          recall_0:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              _target_: src.projects.oeil.evaluation.recall
+              label: 0
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          precision_1:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              _target_: src.projects.oeil.evaluation.precision
+              label: 1
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          recall_1:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              _target_: src.projects.oeil.evaluation.recall
+              label: 1
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          f1_macro:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              # _target_: src.projects.oeil.evaluation.f1_macro
+              _target_: torchmetrics.functional.f1_score
+              num_classes: 2
+              average: "macro"
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          f1_micro:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              # _target_: src.projects.oeil.evaluation.f1_micro
+              _target_: torchmetrics.functional.f1_score
+              num_classes: 2
+              average: "micro"
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+
+        fa:
+          acc:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              _target_: torchmetrics.functional.accuracy
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          auc:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              _target_: src.projects.oeil.evaluation.auc
+           #    num_classes: 2
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          recall_macro:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              # _target_: src.projects.oeil.evaluation.f1_macro
+              _target_: torchmetrics.functional.recall
+              num_classes: 2
+              average: "macro"
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          precision_macro:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              # _target_: src.projects.oeil.evaluation.f1_macro
+              _target_: torchmetrics.functional.precision
+              num_classes: 2
+              average: "macro"
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          precision_0:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              _target_: src.projects.oeil.evaluation.precision
+              label: 0
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          recall_0:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              _target_: src.projects.oeil.evaluation.recall
+              label: 0
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          precision_1:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              _target_: src.projects.oeil.evaluation.precision
+              label: 1
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          recall_1:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              _target_: src.projects.oeil.evaluation.recall
+              label: 1
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          f1_macro:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              # _target_: src.projects.oeil.evaluation.f1_macro
+              _target_: torchmetrics.functional.f1_score
+              num_classes: 2
+              average: "macro"
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"
+          f1_micro:
+            # instructions to instantiate metric, preferrably torchmetrics.Metric
+            metric:
+              _partial_: true
+              # _target_: src.projects.oeil.evaluation.f1_micro
+              _target_: torchmetrics.functional.f1_score
+              num_classes: 2
+              average: "micro"
+            # either "eval_step" or "epoch_end"
+            compute_on: "epoch_end"
+            kwargs: 
+              preds: "outputs:preds"
+              target: "outputs:labels"

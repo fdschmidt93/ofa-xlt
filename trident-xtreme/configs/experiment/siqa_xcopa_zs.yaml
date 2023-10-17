@@ -1,0 +1,38 @@
+# @package _global_
+
+# to execute this experiment run:
+# python run.py experiment=mnli
+
+defaults:
+  - override /trainer: default.yaml # choose trainer from 'configs/trainer/'
+  - override /module: multiple_choice.yaml
+  - override /datamodule: siqa_xcopa_zs.yaml
+  - override /callbacks: default.yaml
+  - override /logger: wandb.yaml
+
+seed: 42
+
+trainer:
+  max_epochs: 10
+  gpus: 1
+  precision: 16
+
+module:
+  model:
+    pretrained_model_name_or_path: "xlm-roberta-base"
+
+logger:
+  wandb:
+    project: "siqa-xcopa-zs"
+    name: "model=${module.model.pretrained_model_name_or_path}-seed=${seed}-epochs=${trainer.max_epochs}"
+
+callbacks:
+  model_checkpoint_on_epoch:
+    _target_: lightning.pytorch.callbacks.ModelCheckpoint
+    monitor: null # name of the logged metric which determines when model is improving
+    every_n_epochs: 1 # truncated length of MNLI train / 16
+    verbose: false
+    save_top_k: -1 # -1 -> all models are saved
+    save_last: false # additionaly always save model from last epoch
+    dirpath: "checkpoints/"
+    auto_insert_metric_name: false

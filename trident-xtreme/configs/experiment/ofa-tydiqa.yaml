@@ -1,0 +1,69 @@
+# @package _global_
+
+# to execute this experiment run:
+# python run.py experiment=mnli
+
+defaults:
+  - override /trainer: default.yaml # choose trainer from 'configs/trainer/'
+  - override /module: question_answering.yaml
+  - override /datamodule: tydiqa.yaml
+  - override /callbacks: null
+  - override /config_callbacks: trident.yaml
+  - override /logger: wandb.yaml
+
+seed: ${rnd:1,1000000}
+kind: single
+task: tydiqa
+actual_batch_size: 16
+
+trainer:
+  max_epochs: 40
+  devices: 1
+  precision: "16-mixed"
+  deterministic: true
+  inference_mode: false
+  num_sanity_val_steps: 0
+  gradient_clip_val: 1
+  check_val_every_n_epoch: 4
+  accumulate_grad_batches: 1
+
+module:
+  _target_: src.modules.modeling.average.AverageTridentModule
+  avg_ckpts: "${callbacks.model_checkpoint_on_epoch.dirpath}"
+  compile: false
+  clf_path: ???
+  model:
+    pretrained_model_name_or_path: ???
+    # pretrained_model_name_or_path: "xlm-roberta-large"
+    # pretrained_model_name_or_path: "facebook/xlm-v-base"
+    # pretrained_model_name_or_path: "microsoft/mdeberta-v3-base"
+  optimizer:
+    lr: ???
+logger:
+  wandb:
+    name: "kind=${kind}_model=${rm_upto_backslash:${module.model.pretrained_model_name_or_path}}_lr=${module.optimizer.lr}_epochs=${trainer.max_epochs}_bs=${datamodule.dataloader_cfg.train.batch_size}_seed=${seed}_scheduler=${module.scheduler.num_warmup_steps}"
+    project: "ofa-${task}"
+    tags:
+      - "${kind}"
+      - "${rm_upto_backslash:${module.model.pretrained_model_name_or_path}}"
+      - "bs=${datamodule.dataloader_cfg.train.batch_size}"
+      - "lr=${module.optimizer.lr}"
+      - "scheduler=${module.scheduler.num_warmup_steps}"
+
+callbacks:
+  model_checkpoint_on_epoch:
+    _target_: lightning.pytorch.callbacks.ModelCheckpoint
+    monitor: null # name of the logged metric which determines when model is improving
+    # monitor: "validation_xnli_en/val/acc" # name of the logged metric which determines when model is improving
+    # mode: "max" # name of the logged metric which determines when model is improving
+    every_n_epochs: 4 # truncated length of NLI train / 16
+    verbose: false
+    save_top_k: -1 # -1 -> all models are saved
+    filename: "epoch={epoch}_val={test_tydiqa_en/val/f1:.4f}"
+    save_last: false # additionaly always save model from last epoch
+    dirpath: "${hydra:runtime.output_dir}/checkpoints/"
+    save_weights_only: true
+    auto_insert_metric_name: false
+  learning_rate:
+    _target_: lightning.pytorch.callbacks.LearningRateMonitor
+    logging_interval: "step"
